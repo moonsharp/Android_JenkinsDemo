@@ -1,0 +1,99 @@
+apply plugin: 'com.android.application'
+
+repositories {
+    mavenLocal()
+    maven {
+        url 'http://repo.baichuan-android.taobao.com/content/groups/BaichuanRepositories/'
+    }
+
+}
+
+android {
+    def final APP_NAME = "集成测试"
+    def final APK_NAME_PRODUCT = "JenkinsDemo3";
+    def final BASE_VERSION_NAME = "1.0.0"
+    def final VERSION_CODE = 1
+
+    def env = System.getenv()
+    def isBuildFromJenkins = env['BUILD_NUMBER'] as Integer ? true : false
+    def qaNumber = env['QA_NUMBER'] as Integer ?: 0
+    def buildNumber = env['BUILD_NUMBER'] as Integer ?: 0
+    def keystorePath = env['ANDROID_KEYSTORE_PATH'] as String ? env['ANDROID_KEYSTORE_PATH'] : '/keystore/not/exist';
+
+    compileSdkVersion 23
+    buildToolsVersion "23.0.3"
+
+    defaultConfig {
+        applicationId "soho.phicomm.jenkinsdemo3"
+        minSdkVersion 15
+        targetSdkVersion 23
+        versionName BASE_VERSION_NAME
+        versionCode isBuildFromJenkins ? VERSION_CODE : 1
+        ndk { abiFilters "armeabi", "armeabi-v7a", "x86", "mips" }
+//        resValue "string", "app_name", APP_NAME
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        config {
+            keyAlias 'd:/yfkey.keystore'
+            keyPassword System.getenv("ANDROID_KEYSTORE_ALIAS_PW")
+            storeFile file(keystorePath)
+            storePassword System.getenv("ANDROID_KEYSTORE_STORE_PW")
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.config
+            minifyEnabled false
+            debuggable true
+            debuggable false
+            zipAlignEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            signingConfig signingConfigs.config
+            buildConfigField "boolean", "isDebug", "true"
+            zipAlignEnabled true
+        }
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            output.outputFile = new File(output.outputFile.parentFile,
+                    output.outputFile.name.replace("app-",
+                            APK_NAME_PRODUCT + "-" + "${variant.versionName}-"));
+        }
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs']
+        }
+    }
+
+    repositories {
+        flatDir {
+            dirs 'libs'
+        }
+    }
+
+    productFlavors{
+        qa {
+//            resValue "string", "app_name", APP_NAME + "-QA"
+            versionName BASE_VERSION_NAME + "." + qaNumber + "." + buildNumber
+            buildConfigField "boolean", "IS_DEBUG", "true"
+            buildConfigField "String", "MARKET_URL", "\"http://webmall.wzc.dev.phiwifi.com:1885/appindex.php?channel_type=android&app_sourceid=002\""
+        }
+
+    }
+
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'com.android.support:appcompat-v7:23.1.0'
+    compile 'com.jakewharton:butterknife:8.4.0'
+    annotationProcessor 'com.jakewharton:butterknife-compiler:8.4.0'
+}
